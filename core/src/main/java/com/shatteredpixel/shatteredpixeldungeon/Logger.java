@@ -63,13 +63,17 @@ public class Logger {
 
     public static void logAlert(
             String mobName,
-            int mobId
+            int mobId,
+            boolean oldAlert,
+            boolean newAlert
     ) {
 
         Logger.log(
                 "ALERT",
                 "mob=" + mobName
                         + " id=" + mobId
+                        + "from=" + oldAlert
+                        + "to=" + newAlert
         );
     }
 

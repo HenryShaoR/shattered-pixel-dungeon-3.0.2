@@ -145,7 +145,9 @@ public abstract class Mob extends Char {
 
 		Logger.logAlert(
 				getClass().getSimpleName(),
-				id()
+				id(),
+				alerted,
+				value
 		);
 
 
