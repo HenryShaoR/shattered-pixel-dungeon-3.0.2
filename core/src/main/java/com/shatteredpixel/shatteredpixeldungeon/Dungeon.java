@@ -832,7 +832,18 @@ public class Dungeon {
 		}
 	}
 	
+	// modify the logic of delete game (improvement 2)
 	public static void deleteGame( int save, boolean deleteLevels ) {
+		try {
+			// return true if it is successfully remove to /recovery
+			if (SaveRecoveryManager.archiveDeletedSave(save)) {
+				GamesInProgress.delete( save );
+				return;
+			}
+		} catch (IOException e) {
+			ShatteredPixelDungeon.reportException(e);
+			return;
+		}
 
 		if (deleteLevels) {
 			String folder = GamesInProgress.gameFolder(save);

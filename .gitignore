@@ -21,3 +21,5 @@ local.properties
 
 .DS_Store
 desktop/mob_log.txt
+
+.vscode/
