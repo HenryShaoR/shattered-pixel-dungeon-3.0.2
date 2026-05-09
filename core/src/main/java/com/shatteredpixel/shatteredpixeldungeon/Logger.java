@@ -52,6 +52,10 @@ public class Logger {
             String newState
     ) {
 
+        if (oldState.equals(newState)){
+            return;
+        }
+
         Logger.log(
                 "STATE_CHANGE",
                 "mob=" + mobName
@@ -67,13 +71,16 @@ public class Logger {
             boolean oldAlert,
             boolean newAlert
     ) {
-
+        //Only log the change in Alert
+        if (oldAlert == newAlert){
+            return;
+        }
         Logger.log(
                 "ALERT",
                 "mob=" + mobName
                         + " id=" + mobId
-                        + "from=" + oldAlert
-                        + "to=" + newAlert
+                        + " from= " + oldAlert
+                        + " to= " + newAlert
         );
     }
 
@@ -83,6 +90,10 @@ public class Logger {
             int oldTarget,
             int newTarget
     ) {
+        if (oldTarget == newTarget){
+            return;
+        }
+
         String sOldTarget = Integer.toString(oldTarget);
         String sNewTarget = Integer.toString(newTarget);
         if (oldTarget == -1){
@@ -95,8 +106,8 @@ public class Logger {
                 "TARGET_CHANGE",
                 "mob=" + mobName
                         + " id=" + mobId
-                        + " from=" + sOldTarget
-                        + " to=" + sNewTarget
+                        + " from= " + sOldTarget
+                        + " to= " + sNewTarget
         );
     }
 }
