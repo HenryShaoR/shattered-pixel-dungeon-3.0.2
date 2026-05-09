@@ -15,6 +15,8 @@ import java.nio.file.Paths;
 import java.nio.file.StandardCopyOption;
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
@@ -42,10 +44,16 @@ public class SaveEditor {
         }
     }
 
-    private static void boostHpLimit(SaveSelection selection) {
+    private static void editLevel(SaveSelection selection) {
         JSONObject hero = getHeroObject(selection);
-        int newLvl = hero.getInt(HERO_LEVEL_KEY) + 100;
+        int newLvl = readInt("Enter the new level: ");
         hero.put(HERO_LEVEL_KEY, newLvl);
+    }
+
+    private static void editMaxHp(SaveSelection selection) {
+        JSONObject hero = getHeroObject(selection);
+        int newMaxHp = readInt("Enter the new max HP (HT): ");
+        hero.put("HT", newMaxHp);
     }
 
     private static JSONObject getGameObject(SaveSelection selection) {
@@ -190,14 +198,25 @@ public class SaveEditor {
 
     private static SaveSelection selectSave(HashMap<String, HashMap<String, JSONObject>> saves, Path saveRoot) {
         System.out.println();
-        String selectedSave;
-        HashMap<String, JSONObject> selectedSaveData;
-        do {
-            System.out.println("Select a save to edit:");
-            selectedSave = scanner.nextLine().trim();
-        } while ((selectedSaveData = saves.get(selectedSave)) == null);
+        List<String> saveNames = new ArrayList<>(saves.keySet());
+        Collections.sort(saveNames);
 
-        return new SaveSelection(selectedSave, saveRoot.resolve(selectedSave), selectedSaveData);
+        while (true) {
+            System.out.println("Select a save to edit:");
+            for (String saveName : saveNames) {
+                System.out.println(" - " + saveName + " (or " + saveName.substring("game".length()) + ")");
+            }
+
+            String input = scanner.nextLine().trim();
+            String selectedSave = input.startsWith("game") ? input : "game" + input;
+            HashMap<String, JSONObject> selectedSaveData = saves.get(selectedSave);
+
+            if (selectedSaveData != null) {
+                return new SaveSelection(selectedSave, saveRoot.resolve(selectedSave), selectedSaveData);
+            }
+
+            System.out.println("Unknown save: " + input);
+        }
     }
 
     private static int readInt(String prompt) {
@@ -214,7 +233,8 @@ public class SaveEditor {
 
     private static void updateSave(SaveSelection selection) {
         List<Map.Entry<String, Consumer<SaveSelection>>> options = List.of(
-            Map.entry("Enhance max HP", SaveEditor::boostHpLimit),
+            Map.entry("Edit level", SaveEditor::editLevel),
+            Map.entry("Edit max HP", SaveEditor::editMaxHp),
             Map.entry("Recover to max HP", SaveEditor::recoverHP),
             Map.entry("Invulnerability buff", SaveEditor::addInvulnerability),
             Map.entry("Clear buffs", SaveEditor::clearBuffs),
@@ -236,6 +256,7 @@ public class SaveEditor {
             }
 
             if (choice == options.size()) {
+                options.get(choice - 1).getValue().accept(selection);
                 return;
             }
 
