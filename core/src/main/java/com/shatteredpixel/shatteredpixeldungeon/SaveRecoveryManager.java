@@ -21,14 +21,14 @@ public final class SaveRecoveryManager {
 	}
 
 	public static boolean archiveDeletedSave(int slot) throws IOException {
-		return archiveSave(slot, RECOVERY_DIR, true, MAX_RECOVERED_SAVES);
+		return archiveSave(slot, RECOVERY_DIR, MAX_RECOVERED_SAVES, false);
 	}
 
 	public static boolean archiveDiedSave(int slot) throws IOException {
-		return archiveSave(slot, DIED_DIR, false, 1);
+		return archiveSave(slot, DIED_DIR, 1, true);
 	}
 
-	private static boolean archiveSave(int slot, String archiveRootDir, boolean keepLatest, int maxArchives) throws IOException {
+	private static boolean archiveSave(int slot, String archiveDirName, int maxArchives, boolean clearExisting) throws IOException {
 		FileHandle source = FileUtils.getFileHandle(GamesInProgress.gameFolder(slot));
 		// return flase if the slot is not found
 		if (source == null || !source.exists() || !source.isDirectory()) {
@@ -36,21 +36,21 @@ public final class SaveRecoveryManager {
 		}
 
 		try {
-			FileHandle archiveRoot = FileUtils.getFileHandle(archiveRootDir);
+			FileHandle archiveRoot = FileUtils.getFileHandle(archiveDirName);
 			archiveRoot.mkdirs();
+
+			if (clearExisting) {
+				clearArchives(archiveRoot);
+			}
 
 			long now = System.currentTimeMillis();
 			String archiveName = buildArchiveName(now);
 			// find the most avaliable path
-			FileHandle target = FileUtils.getFileHandle(archiveRootDir + "/" + archiveName);
+			FileHandle target = FileUtils.getFileHandle(archiveDirName + "/" + archiveName);
 			while (target.exists()) {
 				now++;
 				archiveName = buildArchiveName(now);
-				target = FileUtils.getFileHandle(archiveRootDir + "/" + archiveName);
-			}
-
-			if (!keepLatest) {
-				clearArchives(archiveRoot);
+				target = FileUtils.getFileHandle(archiveDirName + "/" + archiveName);
 			}
 
 			// move to target place instead of the deletion
