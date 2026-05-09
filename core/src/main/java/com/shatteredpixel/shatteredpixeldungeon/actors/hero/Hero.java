@@ -27,6 +27,7 @@ import com.shatteredpixel.shatteredpixeldungeon.Bones;
 import com.shatteredpixel.shatteredpixeldungeon.Dungeon;
 import com.shatteredpixel.shatteredpixeldungeon.GamesInProgress;
 import com.shatteredpixel.shatteredpixeldungeon.SPDSettings;
+import com.shatteredpixel.shatteredpixeldungeon.SaveRecoveryManager;
 import com.shatteredpixel.shatteredpixeldungeon.ShatteredPixelDungeon;
 import com.shatteredpixel.shatteredpixeldungeon.Statistics;
 import com.shatteredpixel.shatteredpixeldungeon.actors.Actor;
@@ -183,6 +184,7 @@ import com.watabou.utils.Random;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.io.IOException;
 import java.util.LinkedHashMap;
 
 public class Hero extends Char {
@@ -2212,6 +2214,15 @@ public class Hero extends Char {
 
 		if (cause instanceof Hero.Doom) {
 			((Hero.Doom)cause).onDeath();
+		}
+
+		try {
+			if (SaveRecoveryManager.archiveDiedSave(GamesInProgress.curSlot)) {
+				GamesInProgress.delete(GamesInProgress.curSlot);
+				return;
+			}
+		} catch (IOException e) {
+			ShatteredPixelDungeon.reportException(e);
 		}
 
 		Dungeon.deleteGame( GamesInProgress.curSlot, true );

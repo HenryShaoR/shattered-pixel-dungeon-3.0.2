@@ -24,7 +24,10 @@ package com.shatteredpixel.shatteredpixeldungeon.desktop;
 import com.badlogic.gdx.Gdx;
 import com.badlogic.gdx.Graphics;
 import com.badlogic.gdx.backends.lwjgl3.Lwjgl3Graphics;
+import com.badlogic.gdx.files.FileHandle;
 import com.badlogic.gdx.graphics.Pixmap;
+import com.badlogic.gdx.utils.ScreenUtils;
+import com.badlogic.gdx.graphics.PixmapIO;
 import com.badlogic.gdx.graphics.g2d.PixmapPacker;
 import com.badlogic.gdx.graphics.g2d.freetype.FreeTypeFontGenerator;
 import com.shatteredpixel.shatteredpixeldungeon.SPDSettings;
@@ -33,7 +36,10 @@ import com.watabou.noosa.Game;
 import com.watabou.utils.PlatformSupport;
 import com.watabou.utils.Point;
 
+import java.text.SimpleDateFormat;
+import java.util.Date;
 import java.util.HashMap;
+import java.util.Locale;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -102,6 +108,59 @@ public class DesktopPlatformSupport extends PlatformSupport {
 	public boolean supportsVibration() {
 		//only supports vibration via controller
 		return ControllerHandler.vibrationSupported();
+	}
+
+	@Override
+	public String takeScreenshot() {
+		try {
+			Pixmap pixmap = getFrameBufferPixmap();
+
+			// Flip vertically (framebuffer is y-up, game expects y-down).
+			Pixmap flipped = createPixmap(pixmap.getWidth(), pixmap.getHeight(), pixmap.getFormat());
+			for (int y = 0; y < pixmap.getHeight(); y++) {
+				flipped.drawPixmap(pixmap, 0, y, pixmap.getWidth(), 1, 0, pixmap.getHeight() - 1 - y, pixmap.getWidth(), 1);
+			}
+			pixmap.dispose();
+
+			String ts = timestamp();
+			String name = "screenshot_" + ts + ".png";
+			String picturesPath = screenshotDirectoryPath();
+
+			// Ensure target directory exists in the user's Pictures folder.
+			FileHandle screenshotDir = absoluteFile(picturesPath);
+			screenshotDir.mkdirs();
+
+			writePng(screenshotDir.child(name), flipped);
+			flipped.dispose();
+			return picturesPath;
+		} catch (Exception e) {
+			Game.reportException(e);
+			return null;
+		}
+	}
+
+	protected Pixmap getFrameBufferPixmap() {
+		return ScreenUtils.getFrameBufferPixmap(0, 0, Gdx.graphics.getBackBufferWidth(), Gdx.graphics.getBackBufferHeight());
+	}
+
+	protected Pixmap createPixmap(int width, int height, Pixmap.Format format) {
+		return new Pixmap(width, height, format);
+	}
+
+	protected String timestamp() {
+		return new SimpleDateFormat("yyyy-MM-dd_HH-mm-ss", Locale.ROOT).format(new Date());
+	}
+
+	protected String screenshotDirectoryPath() {
+		return System.getProperty("user.home") + "/Pictures/ShatteredPixelDungeon/";
+	}
+
+	protected FileHandle absoluteFile(String path) {
+		return Gdx.files.absolute(path);
+	}
+
+	protected void writePng(FileHandle file, Pixmap pixmap) {
+		PixmapIO.writePNG(file, pixmap);
 	}
 
 	/* FONT SUPPORT */

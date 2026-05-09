@@ -32,6 +32,7 @@ import com.shatteredpixel.shatteredpixeldungeon.ui.RenderedTextBlock;
 import com.shatteredpixel.shatteredpixeldungeon.ui.Tooltip;
 import com.shatteredpixel.shatteredpixeldungeon.ui.Window;
 import com.shatteredpixel.shatteredpixeldungeon.utils.Holiday;
+import com.shatteredpixel.shatteredpixeldungeon.utils.Screenshot;
 import com.shatteredpixel.shatteredpixeldungeon.windows.WndJournal;
 import com.watabou.gltextures.TextureCache;
 import com.watabou.glwrap.Blending;
@@ -89,6 +90,7 @@ public class PixelScene extends Scene {
 	protected boolean inGameScene = false;
 
 	private Signal.Listener<KeyEvent> fullscreenListener;
+	private Signal.Listener<KeyEvent> screenshotListener;
 
 	@Override
 	public void create() {
@@ -200,6 +202,16 @@ public class PixelScene extends Scene {
 			});
 		}
 
+		// Add listener for screenshot key (F12)
+		if (DeviceCompat.isDesktop() && screenshotListener == null){
+			KeyEvent.addKeyListener(screenshotListener = new Signal.Listener<KeyEvent>() {
+				@Override
+				public boolean onSignal(KeyEvent keyEvent) {
+					return handleScreenshotHotkey(keyEvent);
+				}
+			});
+		}
+
 		super.update();
 		//20% deadzone
 		if (!Cursor.isCursorCaptured()) {
@@ -250,6 +262,15 @@ public class PixelScene extends Scene {
 				ControllerHandler.updateControllerPointer(virtualCursorPos, true);
 			}
 		}
+	}
+
+	boolean handleScreenshotHotkey(KeyEvent keyEvent) {
+		return Screenshot.handle(keyEvent, inGameScene, new Runnable() {
+			@Override
+			public void run() {
+				Game.platform.takeScreenshot();
+			}
+		});
 	}
 
 	private Image cursor = null;
@@ -308,6 +329,9 @@ public class PixelScene extends Scene {
 		PointerEvent.clearListeners();
 		if (fullscreenListener != null){
 			KeyEvent.removeKeyListener(fullscreenListener);
+		}
+		if (screenshotListener != null){
+			KeyEvent.removeKeyListener(screenshotListener);
 		}
 		if (cursor != null){
 			cursor.destroy();
