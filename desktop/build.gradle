@@ -132,4 +132,6 @@ dependencies {
 
     implementation project(':services:updates:githubUpdates')
     implementation project(':services:news:shatteredNews')
+
+    testImplementation "junit:junit:4.13.2"
 }
