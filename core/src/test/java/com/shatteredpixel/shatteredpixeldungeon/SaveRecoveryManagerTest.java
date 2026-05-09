@@ -83,6 +83,35 @@ public class SaveRecoveryManagerTest {
 	}
 
 	@Test
+	public void archiveDiedSaveKeepsOnlyMostRecentArchive() throws Exception {
+		File baseDir = new File(temp.getRoot(), "saves-root");
+		File firstSourceDir = new File(baseDir, "game1");
+		assertTrue(firstSourceDir.mkdirs());
+		assertTrue(new File(firstSourceDir, "game.dat").createNewFile());
+
+		assertTrue(SaveRecoveryManager.archiveDiedSave(1));
+
+		File diedDir = new File(baseDir, SaveRecoveryManager.DIED_DIR);
+		File[] firstArchivedDirs = diedDir.listFiles(File::isDirectory);
+		assertNotNull(firstArchivedDirs);
+		assertEquals(1, firstArchivedDirs.length);
+		File firstArchivedDir = firstArchivedDirs[0];
+		assertTrue(new File(firstArchivedDir, "game.dat").exists());
+
+		File secondSourceDir = new File(baseDir, "game1");
+		assertTrue(secondSourceDir.mkdirs());
+		assertTrue(new File(secondSourceDir, "game.dat").createNewFile());
+
+		assertTrue(SaveRecoveryManager.archiveDiedSave(1));
+
+		File[] secondArchivedDirs = diedDir.listFiles(File::isDirectory);
+		assertNotNull(secondArchivedDirs);
+		assertEquals(1, secondArchivedDirs.length);
+		assertTrue(new File(secondArchivedDirs[0], "game.dat").exists());
+		assertFalse(firstArchivedDir.exists());
+	}
+
+	@Test
 	public void pruneOldArchivesKeepsNewestFiveNumericDirectories() throws Exception {
 		File recoveryRoot = temp.newFolder("recovery");
 		for (int i = 1; i <= 7; i++) {
@@ -90,7 +119,7 @@ public class SaveRecoveryManagerTest {
 		}
 		assertTrue(new File(recoveryRoot, "deleted-slot3").mkdirs());
 
-		invokePruneOldArchives(new FileHandle(recoveryRoot));
+		invokePruneOldArchives(new FileHandle(recoveryRoot), SaveRecoveryManager.MAX_RECOVERED_SAVES);
 
 		String[] remaining = recoveryRoot.list();
 		assertNotNull(remaining);
@@ -101,10 +130,10 @@ public class SaveRecoveryManagerTest {
 		);
 	}
 
-	private static void invokePruneOldArchives(FileHandle recoveryRoot) throws Exception {
-		Method method = SaveRecoveryManager.class.getDeclaredMethod("pruneOldArchives", FileHandle.class);
+	private static void invokePruneOldArchives(FileHandle recoveryRoot, int maxArchives) throws Exception {
+		Method method = SaveRecoveryManager.class.getDeclaredMethod("pruneOldArchives", FileHandle.class, int.class);
 		method.setAccessible(true);
-		method.invoke(null, recoveryRoot);
+		method.invoke(null, recoveryRoot, maxArchives);
 	}
 
 	private static final class TestFiles implements Files {
