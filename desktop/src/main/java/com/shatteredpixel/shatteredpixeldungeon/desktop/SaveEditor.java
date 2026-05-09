@@ -23,19 +23,46 @@ import java.util.zip.GZIPInputStream;
 import java.util.zip.GZIPOutputStream;
 
 public class SaveEditor {
+    private static final String GAME_FILE = "game.dat";
+    private static final String HERO_KEY = "hero";
+    private static final String HERO_LEVEL_KEY = "lvl";
     private static final Scanner scanner = new Scanner(System.in);
 
     private SaveEditor() {}
 
-    private static void recoverHP(HashMap<String, JSONObject> saveData) {
-        JSONObject game = saveData.get("game.dat");
-        JSONObject hero = game.getJSONObject("hero");
+    private static final class SaveSelection {
+        private final String saveName;
+        private final Path saveDir;
+        private final HashMap<String, JSONObject> saveData;
+
+        private SaveSelection(String saveName, Path saveDir, HashMap<String, JSONObject> saveData) {
+            this.saveName = saveName;
+            this.saveDir = saveDir;
+            this.saveData = saveData;
+        }
+    }
+
+    private static void boostHpLimit(SaveSelection selection) {
+        JSONObject hero = getHeroObject(selection);
+        int newLvl = hero.getInt(HERO_LEVEL_KEY) + 100;
+        hero.put(HERO_LEVEL_KEY, newLvl);
+    }
+
+    private static JSONObject getGameObject(SaveSelection selection) {
+        return selection.saveData.get(GAME_FILE);
+    }
+
+    private static JSONObject getHeroObject(SaveSelection selection) {
+        return getGameObject(selection).getJSONObject(HERO_KEY);
+    }
+
+    private static void recoverHP(SaveSelection selection) {
+        JSONObject hero = getHeroObject(selection);
         hero.put("HP", hero.getInt("HT"));
     }
 
-    private static void addInvulnerability(HashMap<String, JSONObject> saveData) {
-        JSONObject game = saveData.get("game.dat");
-        JSONObject hero = game.getJSONObject("hero");
+    private static void addInvulnerability(SaveSelection selection) {
+        JSONObject hero = getHeroObject(selection);
         JSONArray buffs = hero.getJSONArray("buffs");
         // Construct the buff:
         JSONObject invulnerability = new JSONObject();
@@ -46,32 +73,31 @@ public class SaveEditor {
         buffs.put(invulnerability);
     }
 
-    private static void clearBuffs(HashMap<String, JSONObject> saveData) {
-        JSONObject game = saveData.get("game.dat");
-        JSONObject hero = game.getJSONObject("hero");
+    private static void clearBuffs(SaveSelection selection) {
+        JSONObject hero = getHeroObject(selection);
         hero.remove("buffs");
         hero.put("buffs", new JSONArray());
     }
 
-    private static void editDepth(HashMap<String, JSONObject> saveData) {
-        System.out.print("\nEnter the new depth: ");
-        int newDepth = scanner.nextInt();
-        JSONObject game = saveData.get("game.dat");
+    private static void editDepth(SaveSelection selection) {
+        int newDepth = readInt("\nEnter the new depth: ");
+        JSONObject game = getGameObject(selection);
         int oldMaxDepth = game.getInt("maxDepth");
         game.put("depth", newDepth);
         game.put("maxDepth", Math.max(newDepth, oldMaxDepth));
     }
 
-    private static void saveChange(HashMap<String, JSONObject> saveData) {
-        for (String filename : saveData.keySet()) {
-            Path targetPath = Paths.get(filename);
-            JSONObject json = saveData.get(filename);
+    private static void saveChange(SaveSelection selection) {
+        for (Map.Entry<String, JSONObject> entry : selection.saveData.entrySet()) {
+            String filename = entry.getKey();
+            Path targetPath = selection.saveDir.resolve(filename);
+            JSONObject json = entry.getValue();
 
             try {
                 // 1. Backup existing file if it exists
                 if (Files.exists(targetPath)) {
                     String backupName = filename + "-" + Instant.now().toEpochMilli() + ".old";
-                    Path backupPath = Paths.get(backupName);
+                    Path backupPath = selection.saveDir.resolve(backupName);
                     Files.move(targetPath, backupPath, StandardCopyOption.REPLACE_EXISTING);
                 }
 
@@ -95,7 +121,7 @@ public class SaveEditor {
                 );
 
             } catch (IOException e) {
-                throw new RuntimeException("Failed to save file: " + filename, e);
+                throw new RuntimeException("Failed to save file: " + targetPath, e);
             }
         }
     }
@@ -121,14 +147,18 @@ public class SaveEditor {
         }
     }
 
-    private static HashMap<String, HashMap<String, JSONObject>> loadAllSaves() {
+    private static Path resolveSaveRoot() {
         String title = System.getProperty("Specification-Title", "Shattered Pixel Dungeon");
         String implementationTitle = System.getProperty(
                 "Implementation-Title",
                 "com.shatteredpixel.shatteredpixeldungeon"
         );
         ResolvedSavePath savePath = DesktopSavePaths.resolve(title, implementationTitle);
-        File saveFilesDir = savePath.asFile();
+        return savePath.asFile().toPath();
+    }
+
+    private static HashMap<String, HashMap<String, JSONObject>> loadAllSaves(Path saveRoot) {
+        File saveFilesDir = saveRoot.toFile();
 
         assert(saveFilesDir.exists() && saveFilesDir.isDirectory());
 
@@ -158,21 +188,33 @@ public class SaveEditor {
         return retVal;
     }
 
-    private static HashMap<String, JSONObject> selectSave() {
-        HashMap<String, HashMap<String, JSONObject>> saves = loadAllSaves();
+    private static SaveSelection selectSave(HashMap<String, HashMap<String, JSONObject>> saves, Path saveRoot) {
         System.out.println();
         String selectedSave;
         HashMap<String, JSONObject> selectedSaveData;
         do {
             System.out.println("Select a save to edit:");
-            selectedSave = scanner.nextLine();
+            selectedSave = scanner.nextLine().trim();
         } while ((selectedSaveData = saves.get(selectedSave)) == null);
 
-        return selectedSaveData;
+        return new SaveSelection(selectedSave, saveRoot.resolve(selectedSave), selectedSaveData);
     }
 
-    private static void updateSave(HashMap<String, JSONObject> saveData) {
-        List<Map.Entry<String, Consumer<HashMap<String, JSONObject>>>> options = List.of(
+    private static int readInt(String prompt) {
+        while (true) {
+            System.out.print(prompt);
+            String input = scanner.nextLine().trim();
+            try {
+                return Integer.parseInt(input);
+            } catch (NumberFormatException e) {
+                System.out.println("Invalid number: " + input);
+            }
+        }
+    }
+
+    private static void updateSave(SaveSelection selection) {
+        List<Map.Entry<String, Consumer<SaveSelection>>> options = List.of(
+            Map.entry("Enhance max HP", SaveEditor::boostHpLimit),
             Map.entry("Recover to max HP", SaveEditor::recoverHP),
             Map.entry("Invulnerability buff", SaveEditor::addInvulnerability),
             Map.entry("Clear buffs", SaveEditor::clearBuffs),
@@ -186,7 +228,7 @@ public class SaveEditor {
                 System.out.println((i + 1) + ": " + options.get(i).getKey());
             }
 
-            int choice = scanner.nextInt();
+            int choice = readInt("Choose an action for " + selection.saveName + ": ");
 
             if (choice < 1 || choice > options.size()) {
                 System.out.println("Invalid choice");
@@ -197,13 +239,15 @@ public class SaveEditor {
                 return;
             }
 
-            options.get(choice - 1).getValue().accept(saveData);
+            options.get(choice - 1).getValue().accept(selection);
         }
     }
 
     public static void main(String[] args) {
         System.out.println("================================================================================");
-        HashMap<String, JSONObject> selectedSave = selectSave();
+        Path saveRoot = resolveSaveRoot();
+        HashMap<String, HashMap<String, JSONObject>> saves = loadAllSaves(saveRoot);
+        SaveSelection selectedSave = selectSave(saves, saveRoot);
         updateSave(selectedSave);
         System.out.println("================================================================================");
 
