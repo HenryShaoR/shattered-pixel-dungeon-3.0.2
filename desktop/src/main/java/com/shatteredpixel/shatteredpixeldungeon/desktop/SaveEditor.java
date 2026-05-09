@@ -1,5 +1,6 @@
 package com.shatteredpixel.shatteredpixeldungeon.desktop;
 
+import org.json.JSONArray;
 import org.json.JSONException;
 import org.json.JSONTokener;
 import org.json.JSONObject;
@@ -9,12 +10,17 @@ import com.shatteredpixel.shatteredpixeldungeon.desktop.DesktopSavePaths.Resolve
 import java.io.*;
 import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
+import java.nio.file.Path;
+import java.nio.file.Paths;
+import java.nio.file.StandardCopyOption;
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Scanner;
 import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
+import java.util.zip.GZIPOutputStream;
 
 public class SaveEditor {
     private static final Scanner scanner = new Scanner(System.in);
@@ -22,19 +28,76 @@ public class SaveEditor {
     private SaveEditor() {}
 
     private static void recoverHP(HashMap<String, JSONObject> saveData) {
-
+        JSONObject game = saveData.get("game.dat");
+        JSONObject hero = game.getJSONObject("hero");
+        hero.put("HP", hero.getInt("HT"));
     }
 
     private static void addInvulnerability(HashMap<String, JSONObject> saveData) {
-
+        JSONObject game = saveData.get("game.dat");
+        JSONObject hero = game.getJSONObject("hero");
+        JSONArray buffs = hero.getJSONArray("buffs");
+        // Construct the buff:
+        JSONObject invulnerability = new JSONObject();
+        invulnerability.put("id", Integer.MAX_VALUE);
+        invulnerability.put("time", 0);
+        invulnerability.put("__className", "com.shatteredpixel.shatteredpixeldungeon.actors.buffs.InvulnerabilityForever");
+        // Add buff
+        buffs.put(invulnerability);
     }
 
     private static void clearBuffs(HashMap<String, JSONObject> saveData) {
-
+        JSONObject game = saveData.get("game.dat");
+        JSONObject hero = game.getJSONObject("hero");
+        hero.remove("buffs");
+        hero.put("buffs", new JSONArray());
     }
 
     private static void editDepth(HashMap<String, JSONObject> saveData) {
+        System.out.print("\nEnter the new depth: ");
+        int newDepth = scanner.nextInt();
+        JSONObject game = saveData.get("game.dat");
+        int oldMaxDepth = game.getInt("maxDepth");
+        game.put("depth", newDepth);
+        game.put("maxDepth", Math.max(newDepth, oldMaxDepth));
+    }
 
+    private static void saveChange(HashMap<String, JSONObject> saveData) {
+        for (String filename : saveData.keySet()) {
+            Path targetPath = Paths.get(filename);
+            JSONObject json = saveData.get(filename);
+
+            try {
+                // 1. Backup existing file if it exists
+                if (Files.exists(targetPath)) {
+                    String backupName = filename + "-" + Instant.now().toEpochMilli() + ".old";
+                    Path backupPath = Paths.get(backupName);
+                    Files.move(targetPath, backupPath, StandardCopyOption.REPLACE_EXISTING);
+                }
+
+                // 2. Create temp file
+                Path tempPath = Files.createTempFile("json-save-", ".gz");
+
+                try (OutputStream fos = Files.newOutputStream(tempPath);
+                     GZIPOutputStream gos = new GZIPOutputStream(fos);
+                     OutputStreamWriter osw = new OutputStreamWriter(gos);
+                     BufferedWriter writer = new BufferedWriter(osw)) {
+
+                    writer.write(json.toString());
+                }
+
+                // 3. Atomically move temp -> target
+                Files.move(
+                        tempPath,
+                        targetPath,
+                        StandardCopyOption.REPLACE_EXISTING,
+                        StandardCopyOption.ATOMIC_MOVE
+                );
+
+            } catch (IOException e) {
+                throw new RuntimeException("Failed to save file: " + filename, e);
+            }
+        }
     }
 
     private static JSONObject gzip2Json(File gzipFile) {
@@ -114,7 +177,7 @@ public class SaveEditor {
             Map.entry("Invulnerability buff", SaveEditor::addInvulnerability),
             Map.entry("Clear buffs", SaveEditor::clearBuffs),
             Map.entry("Edit depth", SaveEditor::editDepth),
-            Map.entry("Exit", sd -> {})
+            Map.entry("Save and exit", SaveEditor::saveChange)
         );
 
         while (true) {
