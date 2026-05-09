@@ -8,14 +8,32 @@ import com.shatteredpixel.shatteredpixeldungeon.desktop.DesktopSavePaths.Resolve
 import java.io.*;
 import java.nio.file.Files;
 import java.util.HashMap;
-import java.util.LinkedList;
+import java.util.List;
+import java.util.Map;
 import java.util.Scanner;
+import java.util.function.Consumer;
 import java.util.zip.GZIPInputStream;
 
 public class SaveEditor {
+    private static final Scanner scanner = new Scanner(System.in);
+
     private SaveEditor() {}
 
-    private static final Scanner scanner = new Scanner(System.in);
+    private static void recoverHP(HashMap<String, JsonNode> saveData) {
+
+    }
+
+    private static void addInvulnerability(HashMap<String, JsonNode> saveData) {
+
+    }
+
+    private static void clearBuffs(HashMap<String, JsonNode> saveData) {
+
+    }
+
+    private static void editDepth(HashMap<String, JsonNode> saveData) {
+
+    }
 
     private static JsonNode gzip2Json(File gzipFile) {
         ObjectMapper mapper = new ObjectMapper();
@@ -68,7 +86,7 @@ public class SaveEditor {
         HashMap<String, HashMap<String, JsonNode>> saves = loadAllSaves();
         System.out.println("\n");
         String selectedSave;
-        HashMap<String, JsonNode> selectedSaveData = null;
+        HashMap<String, JsonNode> selectedSaveData;
         do {
             System.out.println("Select a save to edit:");
             selectedSave = scanner.nextLine();
@@ -77,9 +95,40 @@ public class SaveEditor {
         return selectedSaveData;
     }
 
+    private static void updateSave(HashMap<String, JsonNode> saveData) {
+        List<Map.Entry<String, Consumer<HashMap<String, JsonNode>>>> options = List.of(
+            Map.entry("Recover to max HP", SaveEditor::recoverHP),
+            Map.entry("Invulnerability buff", SaveEditor::addInvulnerability),
+            Map.entry("Clear buffs", SaveEditor::clearBuffs),
+            Map.entry("Edit depth", SaveEditor::editDepth),
+            Map.entry("Exit", sd -> {})
+        );
+
+        while (true) {
+            for (int i = 0; i < options.size(); i++) {
+                System.out.println((i + 1) + ": " + options.get(i).getKey());
+            }
+
+            int choice = scanner.nextInt();
+
+            if (choice < 1 || choice > options.size()) {
+                System.out.println("Invalid choice");
+                continue;
+            }
+
+            if (choice == options.size()) {
+                return;
+            }
+
+            options.get(choice - 1).getValue().accept(saveData);
+        }
+    }
+
     public static void main(String[] args) {
+        initOptions();
         System.out.println("================================================================================");
         HashMap<String, JsonNode> selectedSave = selectSave();
+        updateSave(selectedSave);
         System.out.println("================================================================================");
 
     }
