@@ -13,6 +13,7 @@ import java.util.Comparator;
 public final class SaveRecoveryManager {
 
 	public static final String RECOVERY_DIR = "recovery";
+	public static final String DIED_DIR = "died";
 	// define the max number of the archive
 	public static final int MAX_RECOVERED_SAVES = 5;
 
@@ -20,6 +21,14 @@ public final class SaveRecoveryManager {
 	}
 
 	public static boolean archiveDeletedSave(int slot) throws IOException {
+		return archiveSave(slot, RECOVERY_DIR, true, MAX_RECOVERED_SAVES);
+	}
+
+	public static boolean archiveDiedSave(int slot) throws IOException {
+		return archiveSave(slot, DIED_DIR, false, 1);
+	}
+
+	private static boolean archiveSave(int slot, String archiveRootDir, boolean keepLatest, int maxArchives) throws IOException {
 		FileHandle source = FileUtils.getFileHandle(GamesInProgress.gameFolder(slot));
 		// return flase if the slot is not found
 		if (source == null || !source.exists() || !source.isDirectory()) {
@@ -27,23 +36,27 @@ public final class SaveRecoveryManager {
 		}
 
 		try {
-			FileHandle recoveryRoot = FileUtils.getFileHandle(RECOVERY_DIR);
-			recoveryRoot.mkdirs();
+			FileHandle archiveRoot = FileUtils.getFileHandle(archiveRootDir);
+			archiveRoot.mkdirs();
 
 			long now = System.currentTimeMillis();
 			String archiveName = buildArchiveName(now);
 			// find the most avaliable path
-			FileHandle target = FileUtils.getFileHandle(RECOVERY_DIR + "/" + archiveName);
+			FileHandle target = FileUtils.getFileHandle(archiveRootDir + "/" + archiveName);
 			while (target.exists()) {
 				now++;
 				archiveName = buildArchiveName(now);
-				target = FileUtils.getFileHandle(RECOVERY_DIR + "/" + archiveName);
+				target = FileUtils.getFileHandle(archiveRootDir + "/" + archiveName);
+			}
+
+			if (!keepLatest) {
+				clearArchives(archiveRoot);
 			}
 
 			// move to target place instead of the deletion
 			source.moveTo(target);
 			// delete the oldest one if there the number is over the max number
-			pruneOldArchives(recoveryRoot);
+			pruneOldArchives(archiveRoot, maxArchives);
 			return true;
 		} catch (GdxRuntimeException e) {
 			throw new IOException(e);
@@ -62,7 +75,15 @@ public final class SaveRecoveryManager {
 		}
 	}
 
-	private static void pruneOldArchives(FileHandle recoveryRoot) {
+	private static void clearArchives(FileHandle archiveRoot) {
+		for (FileHandle file : archiveRoot.list()) {
+			if (file.isDirectory()) {
+				file.deleteDirectory();
+			}
+		}
+	}
+
+	private static void pruneOldArchives(FileHandle recoveryRoot, int maxArchives) {
 		ArrayList<FileHandle> archives = new ArrayList<>();
 		// find all the legal archive game
 		for (FileHandle file : recoveryRoot.list()) {
@@ -80,7 +101,7 @@ public final class SaveRecoveryManager {
 		});
 
 		// delete extra file
-		for (int i = MAX_RECOVERED_SAVES; i < archives.size(); i++) {
+		for (int i = maxArchives; i < archives.size(); i++) {
 			archives.get(i).deleteDirectory();
 		}
 	}
