@@ -28,6 +28,16 @@ task debug(type: JavaExec) {
     }
 }
 
+task edit(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    ignoreExitValue = true
+
+    main = "com.shatteredpixel.shatteredpixeldungeon.desktop.SaveEditor"
+    systemProperty 'Specification-Title', appName
+    systemProperty 'Implementation-Title', appPackageName
+    standardInput = System.in
+}
+
 // modification for improvement 2
 task recoverSave(type: JavaExec) {
     classpath = sourceSets.main.runtimeClasspath
@@ -121,6 +131,8 @@ dependencies {
     implementation "com.badlogicgames.gdx:gdx-platform:$gdxVersion:natives-desktop"
     implementation "com.badlogicgames.gdx:gdx-freetype-platform:$gdxVersion:natives-desktop"
     implementation "com.badlogicgames.gdx-controllers:gdx-controllers-desktop:$gdxControllersVersion"
+
+    implementation "com.fasterxml.jackson.core:jackson-databind:2.17.1"
 
     //we use LWJGL tinyFD directly to display crash messages
     implementation "org.lwjgl:lwjgl-tinyfd:3.3.3"
