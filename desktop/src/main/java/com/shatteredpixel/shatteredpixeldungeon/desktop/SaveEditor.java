@@ -1,11 +1,13 @@
 package com.shatteredpixel.shatteredpixeldungeon.desktop;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
+import org.json.JSONException;
+import org.json.JSONTokener;
+import org.json.JSONObject;
 
 import com.shatteredpixel.shatteredpixeldungeon.desktop.DesktopSavePaths.ResolvedSavePath;
 
 import java.io.*;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Files;
 import java.util.HashMap;
 import java.util.List;
@@ -19,33 +21,44 @@ public class SaveEditor {
 
     private SaveEditor() {}
 
-    private static void recoverHP(HashMap<String, JsonNode> saveData) {
+    private static void recoverHP(HashMap<String, JSONObject> saveData) {
 
     }
 
-    private static void addInvulnerability(HashMap<String, JsonNode> saveData) {
+    private static void addInvulnerability(HashMap<String, JSONObject> saveData) {
 
     }
 
-    private static void clearBuffs(HashMap<String, JsonNode> saveData) {
+    private static void clearBuffs(HashMap<String, JSONObject> saveData) {
 
     }
 
-    private static void editDepth(HashMap<String, JsonNode> saveData) {
+    private static void editDepth(HashMap<String, JSONObject> saveData) {
 
     }
 
-    private static JsonNode gzip2Json(File gzipFile) {
-        ObjectMapper mapper = new ObjectMapper();
+    private static JSONObject gzip2Json(File gzipFile) {
+        try (GZIPInputStream gis =
+                     new GZIPInputStream(Files.newInputStream(gzipFile.toPath()));
+             InputStreamReader isr = new InputStreamReader(gis, StandardCharsets.UTF_8);
+             BufferedReader reader = new BufferedReader(isr)) {
 
-        try (GZIPInputStream gis = new GZIPInputStream(Files.newInputStream(gzipFile.toPath()))) {
-            return mapper.readTree(gis);
+            StringBuilder sb = new StringBuilder();
+            String line;
+
+            while ((line = reader.readLine()) != null) {
+                sb.append(line);
+            }
+
+            return new JSONObject(new JSONTokener(sb.toString()));
         } catch (IOException e) {
-            throw new RuntimeException("Failed to parse gzip JSON file: " + gzipFile, e);
+            throw new RuntimeException("Failed to parse gzip file: " + gzipFile, e);
+        } catch (JSONException e) {
+            throw new RuntimeException("Failed to parse JSON", e);
         }
     }
 
-    private static HashMap<String, HashMap<String, JsonNode>> loadAllSaves() {
+    private static HashMap<String, HashMap<String, JSONObject>> loadAllSaves() {
         String title = System.getProperty("Specification-Title", "Shattered Pixel Dungeon");
         String implementationTitle = System.getProperty(
                 "Implementation-Title",
@@ -58,7 +71,7 @@ public class SaveEditor {
 
         File[] saves = saveFilesDir.listFiles();
 
-        HashMap<String, HashMap<String, JsonNode>> retVal = new HashMap<>();
+        HashMap<String, HashMap<String, JSONObject>> retVal = new HashMap<>();
 
         if (saves != null) {
             for (File save : saves) {
@@ -68,7 +81,7 @@ public class SaveEditor {
                         continue;
                     }
 
-                    HashMap<String, JsonNode> saveData = new HashMap<>();
+                    HashMap<String, JSONObject> saveData = new HashMap<>();
                     System.out.println(" - " + save.getName());
 
                     for (File file : files) {
@@ -82,11 +95,11 @@ public class SaveEditor {
         return retVal;
     }
 
-    private static HashMap<String, JsonNode> selectSave() {
-        HashMap<String, HashMap<String, JsonNode>> saves = loadAllSaves();
-        System.out.println("\n");
+    private static HashMap<String, JSONObject> selectSave() {
+        HashMap<String, HashMap<String, JSONObject>> saves = loadAllSaves();
+        System.out.println();
         String selectedSave;
-        HashMap<String, JsonNode> selectedSaveData;
+        HashMap<String, JSONObject> selectedSaveData;
         do {
             System.out.println("Select a save to edit:");
             selectedSave = scanner.nextLine();
@@ -95,8 +108,8 @@ public class SaveEditor {
         return selectedSaveData;
     }
 
-    private static void updateSave(HashMap<String, JsonNode> saveData) {
-        List<Map.Entry<String, Consumer<HashMap<String, JsonNode>>>> options = List.of(
+    private static void updateSave(HashMap<String, JSONObject> saveData) {
+        List<Map.Entry<String, Consumer<HashMap<String, JSONObject>>>> options = List.of(
             Map.entry("Recover to max HP", SaveEditor::recoverHP),
             Map.entry("Invulnerability buff", SaveEditor::addInvulnerability),
             Map.entry("Clear buffs", SaveEditor::clearBuffs),
@@ -105,6 +118,7 @@ public class SaveEditor {
         );
 
         while (true) {
+            System.out.println();
             for (int i = 0; i < options.size(); i++) {
                 System.out.println((i + 1) + ": " + options.get(i).getKey());
             }
@@ -125,9 +139,8 @@ public class SaveEditor {
     }
 
     public static void main(String[] args) {
-        initOptions();
         System.out.println("================================================================================");
-        HashMap<String, JsonNode> selectedSave = selectSave();
+        HashMap<String, JSONObject> selectedSave = selectSave();
         updateSave(selectedSave);
         System.out.println("================================================================================");
 
