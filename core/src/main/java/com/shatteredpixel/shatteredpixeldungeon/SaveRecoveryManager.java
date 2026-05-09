@@ -20,8 +20,11 @@ public final class SaveRecoveryManager {
 	}
 
 	public static boolean archiveDeletedSave(int slot) throws IOException {
-		FileHandle source = FileUtils.getFileHandle(GamesInProgress.gameFolder(slot));
-		// return flase if the slot is not found
+		return archiveDeletedSaveFolder(GamesInProgress.gameFolder(slot));
+	}
+
+	public static boolean archiveDeletedSaveFolder(String gameFolder) throws IOException {
+		FileHandle source = FileUtils.getFileHandle(gameFolder);
 		if (source == null || !source.exists() || !source.isDirectory()) {
 			return false;
 		}
@@ -32,7 +35,6 @@ public final class SaveRecoveryManager {
 
 			long now = System.currentTimeMillis();
 			String archiveName = buildArchiveName(now);
-			// find the most avaliable path
 			FileHandle target = FileUtils.getFileHandle(RECOVERY_DIR + "/" + archiveName);
 			while (target.exists()) {
 				now++;
