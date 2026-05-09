@@ -41,6 +41,11 @@ public abstract class PlatformSupport {
 
 	public abstract boolean supportsVibration();
 
+	public String takeScreenshot() {
+		//does nothing by default
+		return null;
+	}
+
 	public void vibrate( int millis ){
 		if (ControllerHandler.isControllerConnected()) {
 			ControllerHandler.vibrate(millis);
