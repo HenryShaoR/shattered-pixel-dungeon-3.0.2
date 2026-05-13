@@ -84,6 +84,15 @@ public class SaveRecoveryManagerTest {
 	}
 
 	@Test
+	public void archiveDeletedSaveReturnsFalseWhenSourceIsAFile() throws Exception {
+		File baseDir = new File(temp.getRoot(), "saves-root");
+		File sourceFile = new File(baseDir, "game1");
+		assertTrue(sourceFile.createNewFile());
+
+		assertFalse(SaveRecoveryManager.archiveDeletedSave(1));
+	}
+
+	@Test
 	public void archiveDiedSaveKeepsOnlyMostRecentArchive() throws Exception {
 		File baseDir = new File(temp.getRoot(), "saves-root");
 		File firstSourceDir = new File(baseDir, "game1");
@@ -115,6 +124,21 @@ public class SaveRecoveryManagerTest {
 		File archivedGameFile = new File(secondArchivedDirs[0], "game.dat");
 		assertTrue(archivedGameFile.exists());
 		assertEquals("second", new String(java.nio.file.Files.readAllBytes(archivedGameFile.toPath()), StandardCharsets.UTF_8));
+	}
+
+	@Test
+	public void pruneOldArchivesSupportsCustomLimit() throws Exception {
+		File recoveryRoot = temp.newFolder("recovery-limit");
+		for (int i = 1; i <= 4; i++) {
+			assertTrue(new File(recoveryRoot, String.valueOf(i)).mkdirs());
+		}
+
+		invokePruneOldArchives(new FileHandle(recoveryRoot), 2);
+
+		String[] remaining = recoveryRoot.list();
+		assertNotNull(remaining);
+		Arrays.sort(remaining);
+		assertArrayEquals(new String[]{"3", "4"}, remaining);
 	}
 
 	@Test

@@ -1,6 +1,7 @@
 package com.shatteredpixel.shatteredpixeldungeon.desktop;
 
 import com.shatteredpixel.shatteredpixeldungeon.GamesInProgress;
+import com.shatteredpixel.shatteredpixeldungeon.SaveRecoveryManager;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.HeroClass;
 import com.shatteredpixel.shatteredpixeldungeon.actors.hero.HeroSubClass;
 import com.watabou.utils.Bundle;
@@ -36,12 +37,22 @@ public class DesktopSaveRecoveryToolTest {
 	private InputStream originalIn;
 	private PrintStream originalOut;
 	private PrintStream originalErr;
+	private boolean wasWindows;
+	private boolean wasMac;
+	private boolean wasLinux;
+	private String originalOsName;
+	private String originalUserHome;
 
 	@Before
 	public void setUp() {
 		originalIn = System.in;
 		originalOut = System.out;
 		originalErr = System.err;
+		wasWindows = com.badlogic.gdx.utils.SharedLibraryLoader.isWindows;
+		wasMac = com.badlogic.gdx.utils.SharedLibraryLoader.isMac;
+		wasLinux = com.badlogic.gdx.utils.SharedLibraryLoader.isLinux;
+		originalOsName = System.getProperty("os.name");
+		originalUserHome = System.getProperty("user.home");
 	}
 
 	@After
@@ -49,6 +60,11 @@ public class DesktopSaveRecoveryToolTest {
 		System.setIn(originalIn);
 		System.setOut(originalOut);
 		System.setErr(originalErr);
+		com.badlogic.gdx.utils.SharedLibraryLoader.isWindows = wasWindows;
+		com.badlogic.gdx.utils.SharedLibraryLoader.isMac = wasMac;
+		com.badlogic.gdx.utils.SharedLibraryLoader.isLinux = wasLinux;
+		restoreProperty("os.name", originalOsName);
+		restoreProperty("user.home", originalUserHome);
 	}
 
 	@Test
@@ -172,6 +188,18 @@ public class DesktopSaveRecoveryToolTest {
 	}
 
 	@Test
+	public void promptForRecoveryReturnsNullWhenNoInteractiveInputExists() throws Exception {
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		System.setOut(new PrintStream(output));
+		System.setIn(new ByteArrayInputStream(new byte[0]));
+
+		Object result = invokePromptForRecovery(new ArrayList<Object>());
+
+		assertNull(result);
+		assertTrue(output.toString().contains("No interactive input detected."));
+	}
+
+	@Test
 	public void promptForRecoveryReturnsSelectedRecoveryForValidId() throws Exception {
 		File recoveryRoot = temp.newFolder("recovery-prompt");
 		createRecoveryArchive(recoveryRoot, "1000", HeroClass.WARRIOR, HeroSubClass.NONE, 3, 8);
@@ -220,6 +248,65 @@ public class DesktopSaveRecoveryToolTest {
 		DesktopSaveRecoveryTool.main(new String[]{"--help"});
 
 		assertTrue(output.toString().contains("Usage:"));
+	}
+
+	@Test
+	public void mainWithoutRecoveriesPrintsEmptyMessage() throws Exception {
+		configureDesktopPathEnvironment();
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		System.setOut(new PrintStream(output));
+
+		DesktopSaveRecoveryTool.main(new String[]{"1"});
+
+		String text = output.toString();
+		assertTrue(text.contains("Save root:"));
+		assertTrue(text.contains("No deleted saves are currently available for recovery."));
+	}
+
+	@Test
+	public void mainRecoversArchiveIntoFirstEmptySlot() throws Exception {
+		configureDesktopPathEnvironment();
+		File baseDir = desktopBaseDir();
+		File recoveryRoot = new File(baseDir, SaveRecoveryManager.RECOVERY_DIR);
+		assertTrue(recoveryRoot.mkdirs());
+		createRecoveryArchive(recoveryRoot, "1000", HeroClass.WARRIOR, HeroSubClass.NONE, 3, 8);
+
+		ByteArrayOutputStream output = new ByteArrayOutputStream();
+		System.setOut(new PrintStream(output));
+
+		DesktopSaveRecoveryTool.main(new String[]{"1"});
+
+		assertTrue(new File(baseDir, "game1").exists());
+		assertFalse(new File(recoveryRoot, "1000").exists());
+		assertTrue(output.toString().contains("Recovered save 1 into slot 1"));
+	}
+
+	@Test
+	public void selectRecoveryByIdReturnsMatchingRecoveryForStringInput() throws Exception {
+		File recoveryRoot = temp.newFolder("recovery-select");
+		createRecoveryArchive(recoveryRoot, "1000", HeroClass.WARRIOR, HeroSubClass.NONE, 3, 8);
+		createRecoveryArchive(recoveryRoot, "2000", HeroClass.ROGUE, HeroSubClass.NONE, 4, 9);
+		List<?> recoveries = invokeLoadRecoveries(recoveryRoot);
+
+		Object selected = invokePrivateStaticMethod(
+				"selectRecoveryById",
+				new Class[]{List.class, String.class},
+				recoveries,
+				"2"
+		);
+
+		assertSame(recoveries.get(1), selected);
+	}
+
+	@Test
+	public void buildRecoveryEntryFromBundleDefaultsToFirstHeroClassWhenClassIsMissing() throws Exception {
+		Bundle bundle = new Bundle();
+		bundle.put("depth", 2);
+		bundle.put("hero", new Bundle());
+
+		Object recovery = invokeBuildRecoveryEntryFromBundle(1, new File("1000"), 1000L, bundle);
+
+		assertEquals("Warrior", getRecoveryField(recovery, "hero"));
 	}
 
 	@SuppressWarnings("unchecked")
@@ -334,6 +421,31 @@ public class DesktopSaveRecoveryToolTest {
 		File gameFile = new File(archiveDir, "game.dat");
 		try (FileOutputStream output = new FileOutputStream(gameFile)) {
 			assertTrue(Bundle.write(createBundle(heroClass, subClass, floor, level), output, false));
+		}
+	}
+
+	private void configureDesktopPathEnvironment() throws Exception {
+		com.badlogic.gdx.utils.SharedLibraryLoader.isWindows = false;
+		com.badlogic.gdx.utils.SharedLibraryLoader.isMac = true;
+		com.badlogic.gdx.utils.SharedLibraryLoader.isLinux = false;
+		restoreProperty("os.name", "Mac OS X");
+		File homeDir = new File(temp.getRoot(), "home");
+		assertTrue(homeDir.mkdirs() || homeDir.exists());
+		restoreProperty("user.home", homeDir.getAbsolutePath());
+	}
+
+	private File desktopBaseDir() {
+		return DesktopSavePaths.resolve(
+				"Shattered Pixel Dungeon",
+				"com.shatteredpixel.shatteredpixeldungeon"
+		).asFile();
+	}
+
+	private static void restoreProperty(String key, String value) {
+		if (value == null) {
+			System.clearProperty(key);
+		} else {
+			System.setProperty(key, value);
 		}
 	}
 
