@@ -37,6 +37,13 @@ task recoverSave(type: JavaExec) {
     standardInput = System.in
 }
 
+task recoverDiedSave(type: JavaExec) {
+    classpath = sourceSets.main.runtimeClasspath
+    main = "com.shatteredpixel.shatteredpixeldungeon.desktop.DesktopDiedSaveRecoveryTool"
+    systemProperty 'Specification-Title', appName
+    systemProperty 'Implementation-Title', appPackageName
+}
+
 task release(type: Jar) {
     //FIXME this is now needed as of gradle 7.0, due to our weird sourceSets setup. Should see if there's a better way to do this
     setDuplicatesStrategy(DuplicatesStrategy.EXCLUDE)
