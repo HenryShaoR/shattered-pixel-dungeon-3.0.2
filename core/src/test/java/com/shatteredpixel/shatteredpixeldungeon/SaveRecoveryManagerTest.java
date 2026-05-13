@@ -15,6 +15,7 @@ import org.junit.rules.TemporaryFolder;
 import java.io.File;
 import java.io.IOException;
 import java.lang.reflect.Method;
+import java.nio.charset.StandardCharsets;
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
@@ -87,7 +88,9 @@ public class SaveRecoveryManagerTest {
 		File baseDir = new File(temp.getRoot(), "saves-root");
 		File firstSourceDir = new File(baseDir, "game1");
 		assertTrue(firstSourceDir.mkdirs());
-		assertTrue(new File(firstSourceDir, "game.dat").createNewFile());
+		File firstGameFile = new File(firstSourceDir, "game.dat");
+		assertTrue(firstGameFile.createNewFile());
+		java.nio.file.Files.write(firstGameFile.toPath(), "first".getBytes(StandardCharsets.UTF_8));
 
 		assertTrue(SaveRecoveryManager.archiveDiedSave(1));
 
@@ -100,15 +103,18 @@ public class SaveRecoveryManagerTest {
 
 		File secondSourceDir = new File(baseDir, "game1");
 		assertTrue(secondSourceDir.mkdirs());
-		assertTrue(new File(secondSourceDir, "game.dat").createNewFile());
+		File secondGameFile = new File(secondSourceDir, "game.dat");
+		assertTrue(secondGameFile.createNewFile());
+		java.nio.file.Files.write(secondGameFile.toPath(), "second".getBytes(StandardCharsets.UTF_8));
 
 		assertTrue(SaveRecoveryManager.archiveDiedSave(1));
 
 		File[] secondArchivedDirs = diedDir.listFiles(File::isDirectory);
 		assertNotNull(secondArchivedDirs);
 		assertEquals(1, secondArchivedDirs.length);
-		assertTrue(new File(secondArchivedDirs[0], "game.dat").exists());
-		assertFalse(firstArchivedDir.exists());
+		File archivedGameFile = new File(secondArchivedDirs[0], "game.dat");
+		assertTrue(archivedGameFile.exists());
+		assertEquals("second", new String(java.nio.file.Files.readAllBytes(archivedGameFile.toPath()), StandardCharsets.UTF_8));
 	}
 
 	@Test
