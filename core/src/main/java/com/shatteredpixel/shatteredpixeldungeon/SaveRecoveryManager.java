@@ -25,17 +25,16 @@ public final class SaveRecoveryManager {
 	}
 
 	public static boolean archiveDeletedSaveFolder(String gameFolder) throws IOException {
-		FileHandle source = FileUtils.getFileHandle(gameFolder);
-		return archiveSave(slot, RECOVERY_DIR, MAX_RECOVERED_SAVES, false);
+		return archiveSave(gameFolder, RECOVERY_DIR, MAX_RECOVERED_SAVES, false);
 	}
 
 	public static boolean archiveDiedSave(int slot) throws IOException {
-		return archiveSave(slot, DIED_DIR, 1, true);
+		return archiveSave(GamesInProgress.gameFolder(slot), DIED_DIR, 1, true);
 	}
 
-	private static boolean archiveSave(int slot, String archiveDirName, int maxArchives, boolean clearExisting) throws IOException {
-		FileHandle source = FileUtils.getFileHandle(GamesInProgress.gameFolder(slot));
-		// return flase if the slot is not found
+	private static boolean archiveSave(String gameFolder, String archiveDirName, int maxArchives, boolean clearExisting) throws IOException {
+		FileHandle source = FileUtils.getFileHandle(gameFolder);
+		// return false if the source folder is not found
 		if (source == null || !source.exists() || !source.isDirectory()) {
 			return false;
 		}
