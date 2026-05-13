@@ -26,6 +26,7 @@ import com.badlogic.gdx.graphics.Pixmap;
 import com.watabou.glwrap.Texture;
 import com.watabou.noosa.Game;
 
+import java.util.Arrays;
 import java.util.HashMap;
 
 public class TextureCache {
@@ -55,7 +56,7 @@ public class TextureCache {
 	
 	public synchronized static SmartTexture createGradient( int... colors ) {
 		
-		final String key = "" + colors;
+		final String key = Arrays.toString(colors);
 		
 		if (all.containsKey( key )) {
 			
