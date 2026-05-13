@@ -21,6 +21,11 @@ public final class SaveRecoveryManager {
 	}
 
 	public static boolean archiveDeletedSave(int slot) throws IOException {
+		return archiveDeletedSaveFolder(GamesInProgress.gameFolder(slot));
+	}
+
+	public static boolean archiveDeletedSaveFolder(String gameFolder) throws IOException {
+		FileHandle source = FileUtils.getFileHandle(gameFolder);
 		return archiveSave(slot, RECOVERY_DIR, MAX_RECOVERED_SAVES, false);
 	}
 
