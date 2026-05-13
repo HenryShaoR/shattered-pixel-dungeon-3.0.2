@@ -1,7 +1,25 @@
 apply plugin: 'java-library'
+apply plugin: 'jacoco'
 
 [compileJava, compileTestJava]*.options*.encoding = 'UTF-8'
 sourceCompatibility = targetCompatibility = appJavaCompatibility
+
+jacoco {
+    toolVersion = '0.8.12'
+}
+
+test {
+    finalizedBy jacocoTestReport
+}
+
+jacocoTestReport {
+    dependsOn test
+    reports {
+        xml.required = true
+        html.required = true
+        csv.required = false
+    }
+}
 
 dependencies {
     api project(':SPD-classes')
