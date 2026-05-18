@@ -1,5 +1,8 @@
 package com.shatteredpixel.shatteredpixeldungeon;
 
+import com.shatteredpixel.shatteredpixeldungeon.actors.Actor;
+import com.shatteredpixel.shatteredpixeldungeon.actors.mobs.Rat;
+
 import org.junit.After;
 import org.junit.Before;
 import org.junit.Test;
@@ -40,6 +43,8 @@ public class testLogger {
     public void tearDown() {
         System.setOut(originalOut);
         System.setErr(originalErr);
+        Actor.clear();
+        Actor.resetNextID();
 
         if (LOG_FILE.exists()) {
             if (!LOG_FILE.delete()){
@@ -112,6 +117,30 @@ public class testLogger {
 
         assertEquals(1, lines.size());
 
+        assertTrue(lines.get(0).contains("[SPAWN]"));
+        assertTrue(lines.get(0).contains("mob=Rat"));
+        assertTrue(lines.get(0).contains("id=1"));
+    }
+
+    @Test
+    public void testMobNoOpAlert_doesNotConsumeSpawnId() throws Exception {
+
+        // Arrange
+        Actor.clear();
+        Actor.resetNextID();
+
+        TestRat ignoredMob = new TestRat();
+        ignoredMob.clearAlertWithoutChange();
+
+        // Act
+        Actor.add(new Rat());
+
+        // Assert
+        assertTrue(LOG_FILE.exists());
+
+        List<String> lines = Files.readAllLines(LOG_FILE.toPath());
+
+        assertEquals(1, lines.size());
         assertTrue(lines.get(0).contains("[SPAWN]"));
         assertTrue(lines.get(0).contains("mob=Rat"));
         assertTrue(lines.get(0).contains("id=1"));
@@ -300,6 +329,12 @@ public class testLogger {
         assertTrue(lines.get(0).contains("id=1"));
         assertTrue(lines.get(0).contains("from= 42"));
         assertTrue(lines.get(0).contains("to= No Target"));
+    }
+
+    private static class TestRat extends Rat {
+        void clearAlertWithoutChange() {
+            setAlerted(false);
+        }
     }
 
 }

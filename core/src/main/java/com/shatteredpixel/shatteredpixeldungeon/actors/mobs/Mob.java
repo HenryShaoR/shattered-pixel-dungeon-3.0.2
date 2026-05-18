@@ -143,6 +143,10 @@ public abstract class Mob extends Char {
 
 	protected void setAlerted(boolean value) {
 
+		if (alerted == value) {
+			return;
+		}
+
 		Logger.logAlert(
 				getClass().getSimpleName(),
 				id(),
@@ -155,6 +159,10 @@ public abstract class Mob extends Char {
 	}
 
 	protected void setTarget(int newTarget){
+		if (target == newTarget) {
+			return;
+		}
+
 		Logger.logTargetChange(
 				getClass().getSimpleName(),
 				id(),
@@ -1508,4 +1516,3 @@ public abstract class Mob extends Char {
 		heldAllies.clear();
 	}
 }
-
