@@ -237,6 +237,7 @@ public class Dungeon {
 
 		Actor.clear();
 		Actor.resetNextID();
+		Mob.resetLoggerIDs();
 
 		//offset seed slightly to avoid output patterns
 		Random.pushGenerator( seed+1 );
@@ -727,6 +728,7 @@ public class Dungeon {
 
 		Actor.clear();
 		Actor.restoreNextID( bundle );
+		Mob.resetLoggerIDs();
 
 		quickslot.reset();
 		QuickSlotButton.reset();

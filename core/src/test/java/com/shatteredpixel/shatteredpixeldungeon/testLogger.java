@@ -1,6 +1,7 @@
 package com.shatteredpixel.shatteredpixeldungeon;
 
 import com.shatteredpixel.shatteredpixeldungeon.actors.Actor;
+import com.shatteredpixel.shatteredpixeldungeon.actors.mobs.Mob;
 import com.shatteredpixel.shatteredpixeldungeon.actors.mobs.Rat;
 
 import org.junit.After;
@@ -45,6 +46,7 @@ public class testLogger {
         System.setErr(originalErr);
         Actor.clear();
         Actor.resetNextID();
+        Mob.resetLoggerIDs();
 
         if (LOG_FILE.exists()) {
             if (!LOG_FILE.delete()){
@@ -128,6 +130,7 @@ public class testLogger {
         // Arrange
         Actor.clear();
         Actor.resetNextID();
+        Mob.resetLoggerIDs();
 
         TestRat ignoredMob = new TestRat();
         ignoredMob.clearAlertWithoutChange();
@@ -144,6 +147,35 @@ public class testLogger {
         assertTrue(lines.get(0).contains("[SPAWN]"));
         assertTrue(lines.get(0).contains("mob=Rat"));
         assertTrue(lines.get(0).contains("id=1"));
+    }
+
+    @Test
+    public void testMobSpawn_usesMobOnlyIds() throws Exception {
+
+        // Arrange
+        Actor.clear();
+        Actor.resetNextID();
+        Mob.resetLoggerIDs();
+
+        Actor.add(new TestActor());
+        Actor.add(new TestActor());
+
+        // Act
+        Actor.add(new Rat());
+        Actor.add(new Rat());
+
+        // Assert
+        assertTrue(LOG_FILE.exists());
+
+        List<String> lines = Files.readAllLines(LOG_FILE.toPath());
+
+        assertEquals(2, lines.size());
+        assertTrue(lines.get(0).contains("[SPAWN]"));
+        assertTrue(lines.get(0).contains("mob=Rat"));
+        assertTrue(lines.get(0).contains("id=1"));
+        assertTrue(lines.get(1).contains("[SPAWN]"));
+        assertTrue(lines.get(1).contains("mob=Rat"));
+        assertTrue(lines.get(1).contains("id=2"));
     }
 
 
@@ -334,6 +366,13 @@ public class testLogger {
     private static class TestRat extends Rat {
         void clearAlertWithoutChange() {
             setAlerted(false);
+        }
+    }
+
+    private static class TestActor extends Actor {
+        @Override
+        protected boolean act() {
+            return false;
         }
     }
 
