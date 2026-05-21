@@ -112,6 +112,21 @@ public abstract class Mob extends Char {
 	public AiState PASSIVE		= new Passive();
 	public AiState state = SLEEPING;
 
+	private int loggerID = 0;
+	private static int nextLoggerID = 1;
+
+	public static void resetLoggerIDs() {
+		nextLoggerID = 1;
+	}
+
+	private int loggerID() {
+		if (loggerID > 0) {
+			return loggerID;
+		} else {
+			return loggerID = nextLoggerID++;
+		}
+	}
+
 	/**
 	 * Helper method to log the state
 	 * */
@@ -132,7 +147,7 @@ public abstract class Mob extends Char {
 		if (state != newState) {
 			Logger.logStateChange(
 					getClass().getSimpleName(),
-					id(),
+					loggerID(),
 					stateName(state),
 					stateName(newState)
 			);
@@ -145,7 +160,7 @@ public abstract class Mob extends Char {
 
 		Logger.logAlert(
 				getClass().getSimpleName(),
-				id(),
+				loggerID(),
 				alerted,
 				value
 		);
@@ -157,7 +172,7 @@ public abstract class Mob extends Char {
 	protected void setTarget(int newTarget){
 		Logger.logTargetChange(
 				getClass().getSimpleName(),
-				id(),
+				loggerID(),
 				target,
 				newTarget
 		);
@@ -187,7 +202,7 @@ public abstract class Mob extends Char {
 
 			Logger.logSpawn(
 					getClass().getSimpleName(),
-					id()
+					loggerID()
 			);
 
 			//modify health for ascension challenge if applicable, only on first add
@@ -203,6 +218,7 @@ public abstract class Mob extends Char {
 	private static final String SEEN	= "seen";
 	private static final String TARGET	= "target";
 	private static final String MAX_LVL	= "max_lvl";
+	private static final String LOGGER_ID = "logger_id";
 
 	private static final String ENEMY_ID	= "enemy_id";
 	
@@ -225,6 +241,7 @@ public abstract class Mob extends Char {
 		bundle.put( SEEN, enemySeen );
 		bundle.put( TARGET, target );
 		bundle.put( MAX_LVL, maxLvl );
+		if (loggerID > 0) bundle.put( LOGGER_ID, loggerID );
 
 		if (enemy != null) {
 			bundle.put(ENEMY_ID, enemy.id() );
@@ -254,6 +271,13 @@ public abstract class Mob extends Char {
 		target = bundle.getInt( TARGET );
 
 		if (bundle.contains(MAX_LVL)) maxLvl = bundle.getInt(MAX_LVL);
+
+		if (bundle.contains(LOGGER_ID)) {
+			loggerID = bundle.getInt(LOGGER_ID);
+			if (loggerID >= nextLoggerID) {
+				nextLoggerID = loggerID + 1;
+			}
+		}
 
 		if (bundle.contains(ENEMY_ID)) {
 			enemyID = bundle.getInt(ENEMY_ID);
