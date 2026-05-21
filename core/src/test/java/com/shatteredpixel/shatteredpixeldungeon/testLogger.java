@@ -40,6 +40,7 @@ public class testLogger {
         originalErr = System.err;
     }
 
+
     @After
     public void tearDown() {
         System.setOut(originalOut);
@@ -54,6 +55,14 @@ public class testLogger {
                 System.exit(1);
             }
         }
+    }
+
+    @Test
+    public void testLogger_constructor_createsLoggerObject() {
+
+        Logger logger = new Logger();
+
+        assertNotNull(logger);
     }
 
     // Test the positive path where by logging some event, they will appear in mob.txt
