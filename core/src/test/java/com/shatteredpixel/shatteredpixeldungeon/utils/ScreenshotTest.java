@@ -75,8 +75,64 @@ public class ScreenshotTest {
         // noinspection ConstantConditions
         boolean handled = Screenshot.handle(
                 new KeyEvent(Input.Keys.F12, true),
-                false,
+                true,
                 null
+        );
+        assertFalse(handled);
+        assertFalse(Files.exists(out));
+    }
+
+    @Test
+    public void testHandle_noEventNoAction_screenshotNotCreated() throws Exception {
+        Path dir = Files.createTempDirectory("shpd-screenshot-hotkey-test-");
+        Path out = dir.resolve("shot.png");
+        // noinspection ConstantConditions
+        boolean handled = Screenshot.handle(
+                null,
+                true,
+                null
+        );
+        assertFalse(handled);
+        assertFalse(Files.exists(out));
+    }
+
+    @Test
+    public void testHandle_notPressed_screenshotNotCreated() throws Exception {
+        Path dir = Files.createTempDirectory("shpd-screenshot-hotkey-test-");
+        Path out = dir.resolve("shot.png");
+        assertFalse(Files.exists(out));
+
+        boolean handled = Screenshot.handle(
+                new KeyEvent(Input.Keys.F12, false),
+                true,
+                () -> {
+                    try {
+                        Files.write(out, new byte[]{(byte) 0x89, 'P', 'N', 'G'});
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
+        );
+        assertFalse(handled);
+        assertFalse(Files.exists(out));
+    }
+
+    @Test
+    public void testHandle_notF12_screenshotNotCreated() throws Exception {
+        Path dir = Files.createTempDirectory("shpd-screenshot-hotkey-test-");
+        Path out = dir.resolve("shot.png");
+        assertFalse(Files.exists(out));
+
+        boolean handled = Screenshot.handle(
+                new KeyEvent(Input.Keys.F11, true),
+                true,
+                () -> {
+                    try {
+                        Files.write(out, new byte[]{(byte) 0x89, 'P', 'N', 'G'});
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
+                    }
+                }
         );
         assertFalse(handled);
         assertFalse(Files.exists(out));
