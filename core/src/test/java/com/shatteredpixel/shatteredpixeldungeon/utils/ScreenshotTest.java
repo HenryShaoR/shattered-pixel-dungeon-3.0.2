@@ -16,14 +16,11 @@ public class ScreenshotTest {
         boolean handled = Screenshot.handle(
                 new KeyEvent(Input.Keys.F12, true),
                 true,
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Files.write(out, new byte[]{(byte) 0x89, 'P', 'N', 'G'});
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
+                () -> {
+                    try {
+                        Files.write(out, new byte[]{(byte) 0x89, 'P', 'N', 'G'});
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
                 }
         );
@@ -35,17 +32,15 @@ public class ScreenshotTest {
     public void testHandle_notInGame_screenshotNotCreated() throws Exception {
         Path dir = Files.createTempDirectory("shpd-screenshot-hotkey-test-");
         Path out = dir.resolve("shot.png");
+        // noinspection ConstantConditions
         boolean handled = Screenshot.handle(
                 new KeyEvent(Input.Keys.F12, true),
                 false,
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Files.write(out, new byte[]{1});
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
+                () -> {
+                    try {
+                        Files.write(out, new byte[]{1});
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
                 }
         );
@@ -57,17 +52,15 @@ public class ScreenshotTest {
     public void testHandle_noEvent_screenshotNotCreated() throws Exception {
         Path dir = Files.createTempDirectory("shpd-screenshot-hotkey-test-");
         Path out = dir.resolve("shot.png");
+        // noinspection ConstantConditions
         boolean handled = Screenshot.handle(
                 null,
                 true,
-                new Runnable() {
-                    @Override
-                    public void run() {
-                        try {
-                            Files.write(out, new byte[]{1});
-                        } catch (Exception e) {
-                            throw new RuntimeException(e);
-                        }
+                () -> {
+                    try {
+                        Files.write(out, new byte[]{1});
+                    } catch (Exception e) {
+                        throw new RuntimeException(e);
                     }
                 }
         );
@@ -79,6 +72,7 @@ public class ScreenshotTest {
     public void testHandle_noAction_screenshotNotCreated() throws Exception {
         Path dir = Files.createTempDirectory("shpd-screenshot-hotkey-test-");
         Path out = dir.resolve("shot.png");
+        // noinspection ConstantConditions
         boolean handled = Screenshot.handle(
                 new KeyEvent(Input.Keys.F12, true),
                 false,
