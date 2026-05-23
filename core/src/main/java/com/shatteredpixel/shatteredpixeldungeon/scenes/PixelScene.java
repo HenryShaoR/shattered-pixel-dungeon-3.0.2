@@ -265,12 +265,7 @@ public class PixelScene extends Scene {
 	}
 
 	boolean handleScreenshotHotkey(KeyEvent keyEvent) {
-		return Screenshot.handle(keyEvent, inGameScene, new Runnable() {
-			@Override
-			public void run() {
-				Game.platform.takeScreenshot();
-			}
-		});
+		return Screenshot.handle(keyEvent, inGameScene, () -> Game.platform.takeScreenshot());
 	}
 
 	private Image cursor = null;
